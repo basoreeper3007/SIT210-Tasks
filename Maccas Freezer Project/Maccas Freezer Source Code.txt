@@ -1,0 +1,83 @@
+int GreenButton = D7;
+int RedButton = D6;
+int GreenButtonLED = D5;
+int RedButtonLED = D4;
+
+bool GreenButtonState = false;
+bool RedButtonState = false;
+bool AutoAlarm = false;
+
+unsigned long startMillis;  // Variable to store the start time
+const unsigned long period = 10*60*1000; // 10 minutes
+//const unsigned long period = 30000; // 30 seconds (for testing)
+
+void autoAlarm() {
+    AutoAlarm = true;
+    Particle.publish("Buttons", "AlarmOn");
+    Particle.publish("Notification", "On");
+    digitalWrite(RedButtonLED, HIGH);
+    
+    while (AutoAlarm == true)
+    {
+        if (digitalRead(GreenButton) == LOW && digitalRead(RedButton) == LOW)
+        {
+            Particle.publish("Buttons", "AlarmOff");
+            delay(1000);
+            Particle.publish("Notification", "Off");
+            delay(1000);
+            Particle.publish("Buttons", "GreenOff");
+            delay(1000);
+            System.reset();
+        }
+    }
+}
+
+void setup() {
+    pinMode(GreenButton, INPUT_PULLDOWN);
+    pinMode(RedButton, INPUT_PULLDOWN);
+    pinMode(GreenButtonLED, OUTPUT);
+    pinMode(RedButtonLED, OUTPUT);
+
+}
+
+void loop() {
+  if (digitalRead(GreenButton) == HIGH && GreenButtonState == false)
+    {
+        GreenButtonState = true;
+        digitalWrite(GreenButtonLED, HIGH);
+        Particle.publish("Buttons", "GreenOn");
+        
+        startMillis = millis(); //Starts the Auto Alarm Timer
+    }
+    else if (digitalRead(GreenButton) == LOW && GreenButtonState == true)
+    {
+        GreenButtonState = false;
+        digitalWrite(GreenButtonLED, LOW);
+        Particle.publish("Buttons", "GreenOff");
+    }
+    
+    if (digitalRead(RedButton) == HIGH && RedButtonState == false)
+    {
+        RedButtonState = true;
+        digitalWrite(RedButtonLED, HIGH);
+        Particle.publish("Buttons", "AlarmOn");
+        delay(1000);
+        Particle.publish("Notification", "On");
+    }
+    else if (digitalRead(RedButton) == LOW && RedButtonState == true)
+    {
+        RedButtonState = false;
+        digitalWrite(RedButtonLED, LOW);
+        Particle.publish("Buttons", "AlarmOff");
+        delay(1000);
+        Particle.publish("Notification", "Off");
+    }
+    
+    if (GreenButtonState == true && RedButtonState == false && millis() - startMillis >= period) //Turns autoalarm on if green button is on and if timer exceeds the period
+    {
+        autoAlarm(); 
+    }
+    
+}
+
+        
