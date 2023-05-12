@@ -1,0 +1,32 @@
+import RPi.GPIO as GPIO
+from flask import Flask, request
+
+# Set up GPIO pins
+GPIO.setmode(GPIO.BCM)
+GreenButtonLED = 4
+RedButtonLED = 17
+Buzzer = 18
+GPIO.setup(GreenButtonLED, GPIO.OUT)
+GPIO.setup(RedButtonLED, GPIO.OUT)
+GPIO.setup(Buzzer, GPIO.OUT)
+
+app = Flask(__name__)
+
+@app.route('/', methods=['POST'])
+def webhook():
+	data = request.json['data']
+	if data == "GreenOn":
+		GPIO.output(GreenButtonLED, GPIO.HIGH)
+	elif data == "GreenOff":
+		GPIO.output(GreenButtonLED, GPIO.LOW)
+	if data == "AlarmOn": #add piezo buzzer
+		GPIO.output(RedButtonLED, GPIO.HIGH)
+		GPIO.output(Buzzer, GPIO.HIGH)
+	elif data == "AlarmOff":
+		GPIO.output(RedButtonLED, GPIO.LOW)
+		GPIO.output(Buzzer, GPIO.LOW);
+	return 'OK'
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0')
+
