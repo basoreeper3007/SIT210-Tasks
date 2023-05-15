@@ -10,8 +10,10 @@ GPIO.setup(GreenButtonLED, GPIO.OUT)
 GPIO.setup(RedButtonLED, GPIO.OUT)
 GPIO.setup(Buzzer, GPIO.OUT)
 
+#Creates an instance of Flask
 app = Flask(__name__)
 
+#Runs the below function when a POST request is sent at this route
 @app.route('/', methods=['POST'])
 def webhook():
 	data = request.json['data']
@@ -19,7 +21,7 @@ def webhook():
 		GPIO.output(GreenButtonLED, GPIO.HIGH)
 	elif data == "GreenOff":
 		GPIO.output(GreenButtonLED, GPIO.LOW)
-	if data == "AlarmOn": #add piezo buzzer
+	if data == "AlarmOn": 
 		GPIO.output(RedButtonLED, GPIO.HIGH)
 		GPIO.output(Buzzer, GPIO.HIGH)
 	elif data == "AlarmOff":
@@ -27,6 +29,12 @@ def webhook():
 		GPIO.output(Buzzer, GPIO.LOW);
 	return 'OK'
 
+#only runs when the script is being run as the main program, rather 
+#than being executed as a module within another program.
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
 
+#Cleans GPIO pins when program is terminated    
+if KeyboardInterrupt:
+	print("Cleaning GPIO pins...") 
+	GPIO.cleanup()
