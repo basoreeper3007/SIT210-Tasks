@@ -7,9 +7,12 @@ bool GreenButtonState = false;
 bool RedButtonState = false;
 bool AutoAlarm = false;
 
-unsigned long startMillis;  // Variable to store the start time
+unsigned long AAstartMillis;  // Variable to store the start time of the auto alarm
+unsigned long SITstartMillis = millis();  // Variable to store the start time of the system integrity test
+
 const unsigned long period = 10*60*1000; // 10 minutes
 //const unsigned long period = 30000; // 30 seconds (for testing)
+//const unsigned long period = 10000; // 10 seconds (for testing)
 
 void autoAlarm() {
     AutoAlarm = true;
@@ -32,6 +35,12 @@ void autoAlarm() {
     }
 }
 
+//Tests the integrity of the system and its connection by sending data every 10 minutes 
+void systemIntegrityTest() {
+    Particle.publish("Buttons", "SIT");
+    SITstartMillis = millis();
+}
+
 void setup() {
     pinMode(GreenButton, INPUT_PULLDOWN);
     pinMode(RedButton, INPUT_PULLDOWN);
@@ -47,7 +56,7 @@ void loop() {
         digitalWrite(GreenButtonLED, HIGH);
         Particle.publish("Buttons", "GreenOn");
         
-        startMillis = millis(); //Starts the Auto Alarm Timer
+        AAstartMillis = millis(); //Starts the Auto Alarm Timer
     }
     else if (digitalRead(GreenButton) == LOW && GreenButtonState == true)
     {
@@ -73,7 +82,12 @@ void loop() {
         Particle.publish("Notification", "Off");
     }
     
-    if (GreenButtonState == true && RedButtonState == false && millis() - startMillis >= period) //Turns autoalarm on if green button is on and if timer exceeds the period
+    if (millis() - SITstartMillis >= period) //Activates the system integrity test every 10 minutes
+    {
+        systemIntegrityTest();
+    }
+    
+    if (GreenButtonState == true && RedButtonState == false && millis() - AAstartMillis >= period) //Turns autoalarm on if green button is on and if timer exceeds the period
     {
         autoAlarm(); 
     }
