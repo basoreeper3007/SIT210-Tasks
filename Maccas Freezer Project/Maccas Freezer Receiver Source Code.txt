@@ -1,4 +1,6 @@
 import RPi.GPIO as GPIO
+import time
+import threading
 from flask import Flask, request
 
 # Set up GPIO pins
@@ -6,14 +8,24 @@ GPIO.setmode(GPIO.BCM)
 GreenButtonLED = 4
 RedButtonLED = 17
 Buzzer = 18
+SITLED = 22  # System Integrity Test LED
+
 GPIO.setup(GreenButtonLED, GPIO.OUT)
 GPIO.setup(RedButtonLED, GPIO.OUT)
 GPIO.setup(Buzzer, GPIO.OUT)
+GPIO.setup(SITLED, GPIO.OUT)
 
-#Creates an instance of Flask
+# Timer Setup
+timeoutPeriod = 600 #10m
+#timeoutPeriod = 30  # 30s for testing
+#timeoutPeriod = 10  # 10s for testing
+SITtimer = 0
+SITStatus = False
+
+# Creates an instance of Flask
 app = Flask(__name__)
 
-#Runs the below function when a POST request is sent at this route
+# Runs the below function when a POST request is sent at this route
 @app.route('/', methods=['POST'])
 def webhook():
 	data = request.json['data']
@@ -21,20 +33,43 @@ def webhook():
 		GPIO.output(GreenButtonLED, GPIO.HIGH)
 	elif data == "GreenOff":
 		GPIO.output(GreenButtonLED, GPIO.LOW)
-	if data == "AlarmOn": 
+	if data == "AlarmOn":
 		GPIO.output(RedButtonLED, GPIO.HIGH)
 		GPIO.output(Buzzer, GPIO.HIGH)
 	elif data == "AlarmOff":
 		GPIO.output(RedButtonLED, GPIO.LOW)
-		GPIO.output(Buzzer, GPIO.LOW);
+		GPIO.output(Buzzer, GPIO.LOW)
+	if data == "SIT":
+		global SITStatus
+		SITStatus = True
 	return 'OK'
 
-#only runs when the script is being run as the main program, rather 
-#than being executed as a module within another program.
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
 
-#Cleans GPIO pins when program is terminated    
-if KeyboardInterrupt:
-	print("Cleaning GPIO pins...") 
-	GPIO.cleanup()
+def systemIntegrityTest():
+	global SITtimer
+	global SITStatus
+	GPIO.output(SITLED, GPIO.LOW)
+	while True:
+		SITtimer = SITtimer + 1
+		#print(SITstartTime) #For debugging purposes
+		if SITtimer == timeoutPeriod and SITStatus == False:
+			GPIO.output(SITLED, GPIO.HIGH)
+		elif SITStatus == True:
+			SITtimer = 0
+			GPIO.output(SITLED, GPIO.LOW)
+			SITStatus = False
+		time.sleep(1)
+
+
+# Start the system integrity test thread
+sit_thread = threading.Thread(target=systemIntegrityTest)
+sit_thread.daemon = True
+sit_thread.start()
+
+# Run the Flask application
+if __name__ == '__main__':
+	app.run(debug=True, host='0.0.0.0')
+	
+	if KeyboardInterrupt:
+		print("Cleaning GPIO pins...")
+		GPIO.cleanup()
